@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#1a1a2e">
+
+    <!-- 标题 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="方向盘按键自定义"
+        android:textSize="22sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:paddingBottom="4dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="哈弗H6三代 · 空调快捷控制"
+        android:textSize="13sp"
+        android:textColor="#AAAAAA"
+        android:paddingBottom="16dp"/>
+
+    <!-- 服务状态卡片 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="#16213e"
+        android:padding="14dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tv_service_status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="● 服务未启动"
+            android:textSize="15sp"
+            android:textColor="#F44336"/>
+
+        <Button
+            android:id="@+id/btn_toggle_service"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="开启无障碍服务"
+            android:textSize="13sp"/>
+    </LinearLayout>
+
+    <!-- 最后执行的动作提示 -->
+    <TextView
+        android:id="@+id/tv_last_action"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="等待按键..."
+        android:textSize="14sp"
+        android:textColor="#E0E0E0"
+        android:background="#0f3460"
+        android:padding="12dp"
+        android:layout_marginTop="12dp"/>
+
+    <!-- 操作按钮行 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp">
+
+        <Button
+            android:id="@+id/btn_detect_key"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="🔍 按键检测"
+            android:layout_marginEnd="6dp"/>
+
+        <Button
+            android:id="@+id/btn_add_mapping"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="➕ 新增映射"
+            android:layout_marginStart="6dp"/>
+    </LinearLayout>
+
+    <!-- 分隔 + 标题 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="当前按键映射"
+            android:textSize="16sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"/>
+
+        <Button
+            android:id="@+id/btn_reset"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="重置默认"
+            android:textSize="12sp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"/>
+    </LinearLayout>
+
+    <!-- 映射列表 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_mappings"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+</LinearLayout>

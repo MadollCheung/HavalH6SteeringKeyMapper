@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 按键映射列表项 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="#16213e"
+    android:padding="12dp"
+    android:layout_marginBottom="4dp">
+
+    <!-- 文字信息 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginEnd="8dp">
+
+        <TextView
+            android:id="@+id/tv_mapping_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="* + UP → 温度+"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tv_mapping_desc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="升高温度 0.5°C"
+            android:textSize="12sp"
+            android:textColor="#AAAAAA"
+            android:layout_marginTop="2dp"/>
+    </LinearLayout>
+
+    <!-- 启用/禁用开关 -->
+    <Switch
+        android:id="@+id/sw_enabled"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"/>
+
+    <!-- 删除按钮 -->
+    <ImageButton
+        android:id="@+id/btn_delete"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:src="@android:drawable/ic_menu_delete"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="删除"/>
+
+</LinearLayout>

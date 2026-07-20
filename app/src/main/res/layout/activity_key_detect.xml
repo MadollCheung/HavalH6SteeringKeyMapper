@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- activity_key_detect.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="#1a1a2e">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🔑 方向盘按键检测"
+        android:textSize="20sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:paddingBottom="8dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="按下方向盘上的任意按键，将显示对应的 KeyCode\n配置映射时请记录这些数值"
+        android:textSize="13sp"
+        android:textColor="#AAAAAA"
+        android:paddingBottom="16dp"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#0f3460"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tv_detect_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="请按方向盘上的按键..."
+            android:textSize="15sp"
+            android:textColor="#E0E0E0"
+            android:fontFamily="monospace"/>
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp">
+
+        <Button
+            android:id="@+id/btn_clear"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="清除记录"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/btn_done"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="完成"
+            android:layout_marginStart="8dp"/>
+    </LinearLayout>
+</LinearLayout>
