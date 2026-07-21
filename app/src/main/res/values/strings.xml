@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">方向盘按键映射</string>
-    <string name="accessibility_service_label">方向盘按键映射工具</string>
+    <string name="accessibility_service_label">方向盘按键映射</string>
     <string name="accessibility_service_description">监听方向盘硬按键，通过 *键+功能键 组合控制哈弗H6空调温度、风量、内外循环等功能。本服务不读取任何敏感信息。</string>
 </resources>

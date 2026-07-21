@@ -79,14 +79,14 @@ class KeyMappingManager(context: Context) {
                 id = "default_06",
                 modifierKeyCode = DEFAULT_STAR_KEYCODE,
                 actionKeyCode = KeyEvent.KEYCODE_VOLUME_UP,      // * + 音量+
-                action = HvacAction.AC_TOGGLE,
+                action = HvacAction.TEMP_UP,
                 description = "* + 音量+ → A/C 开关"
             ),
             KeyMapping(
                 id = "default_07",
                 modifierKeyCode = DEFAULT_STAR_KEYCODE,
                 actionKeyCode = KeyEvent.KEYCODE_VOLUME_DOWN,    // * + 音量-
-                action = HvacAction.AUTO_MODE,
+                action = HvacAction.TEMP_DOWN,
                 description = "* + 音量- → AUTO 自动模式"
             ),
             KeyMapping(

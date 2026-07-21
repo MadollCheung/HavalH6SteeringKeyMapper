@@ -25,6 +25,7 @@ import androidx.recyclerview.widget.RecyclerView
 class MainActivity : AppCompatActivity() {
 
     private lateinit var keyMappingManager: KeyMappingManager
+    private lateinit var layoutServiceCard: android.view.View
     private lateinit var tvServiceStatus: TextView
     private lateinit var btnToggleService: Button
     private lateinit var btnDetectKey: Button
@@ -68,6 +69,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
+        layoutServiceCard = findViewById(R.id.layout_service_card)
         tvServiceStatus = findViewById(R.id.tv_service_status)
         btnToggleService = findViewById(R.id.btn_toggle_service)
         btnDetectKey = findViewById(R.id.btn_detect_key)
@@ -188,13 +190,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateServiceStatus(running: Boolean) {
         if (running) {
-            tvServiceStatus.text = "● 服务运行中"
-            tvServiceStatus.setTextColor(0xFF4CAF50.toInt())
-            btnToggleService.text = "前往无障碍设置"
+            // 服务已启动：隐藏整个提示卡片，节省横屏空间
+            layoutServiceCard.visibility = View.GONE
         } else {
-            tvServiceStatus.text = "● 服务未启动"
+            // 服务未启动：显示卡片提示用户开启
+            layoutServiceCard.visibility = View.VISIBLE
+            tvServiceStatus.text = "● 无障碍服务未启动"
             tvServiceStatus.setTextColor(0xFFF44336.toInt())
-            btnToggleService.text = "开启无障碍服务"
+            btnToggleService.text = "去开启"
         }
     }
 
