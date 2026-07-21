@@ -1,3 +1,29 @@
-# Project exclude paths
-/.gradle/
-/app/build/
+# Android / Gradle 构建产物
+.gradle/
+build/
+app/build/
+*.apk
+*.aab
+*.class
+*.dex
+local.properties
+
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Kotlin 编译缓存
+**/.kotlin/
+
+# gradle-wrapper.jar 是二进制，需本地执行 gradle wrapper 生成，不提交
+# （CI 里用 actions/setup-java + 自动缓存，不依赖 jar 文件）
+
+# 签名密钥 — 绝对不要提交
+*.keystore
+*.jks
+keystore.properties
