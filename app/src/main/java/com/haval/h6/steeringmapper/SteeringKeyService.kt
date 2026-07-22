@@ -17,7 +17,7 @@ import android.view.accessibility.AccessibilityEvent
  *
  * 工作原理：
  * 1. 注册为 AccessibilityService，获得全局 KeyEvent 拦截权限
- * 2. 识别 *键（KEYCODE_STAR）作为"功能修饰键"
+ * 2. 识别 *键（keyCode=189，adayo 车机上报值）作为"功能修饰键"
  * 3. 在 *键按下后的 1.5s 内，拦截下一个按键作为"功能键"
  * 4. 查询 KeyMappingManager 获取对应 HvacAction，交由 HvacController 执行
  *
@@ -132,7 +132,7 @@ class SteeringKeyService : AccessibilityService() {
      * - 超时 / 松开 * 且没按其他键 → 透传 * 给系统
      */
     private fun handleKeyCombo(keyCode: Int, action: Int): Boolean {
-        val starKeyCode = keyMappingManager?.getStarKeyCode() ?: KeyEvent.KEYCODE_STAR
+        val starKeyCode = keyMappingManager?.getStarKeyCode() ?: 189  // 哈弗H6三代 * 键 keyCode
 
         return when {
             // * 键按下：开始等待组合
