@@ -18,9 +18,17 @@ data class KeyMapping(
     val enabled: Boolean = true       // 是否启用
 ) {
     fun getDisplayName(): String {
-        val modName = KeyEvent.keyCodeToString(modifierKeyCode).removePrefix("KEYCODE_")
-        val actName = KeyEvent.keyCodeToString(actionKeyCode).removePrefix("KEYCODE_")
+        val modName = keyCodeToFriendlyName(modifierKeyCode)
+        val actName = keyCodeToFriendlyName(actionKeyCode)
         return "$modName + $actName → ${action.displayName}"
+    }
+
+    companion object {
+        /** 将 keyCode 转换为可读名称，对车机自定义 keyCode 做特殊处理 */
+        fun keyCodeToFriendlyName(keyCode: Int): String = when (keyCode) {
+            189  -> "*"                   // 哈弗H6三代方向盘 * 键
+            else -> KeyEvent.keyCodeToString(keyCode).removePrefix("KEYCODE_")
+        }
     }
 }
 
@@ -34,7 +42,8 @@ class KeyMappingManager(context: Context) {
         private const val PREF_NAME = "key_mappings"
         private const val KEY_MAPPINGS = "mappings"
         private const val KEY_STAR_KEYCODE = "star_keycode"
-        private const val DEFAULT_STAR_KEYCODE = KeyEvent.KEYCODE_STAR  // 17
+        // 哈弗H6三代方向盘 * 键实际 keyCode（adayo 车机上报值）
+        private const val DEFAULT_STAR_KEYCODE = 189
 
         /**
          * 默认按键映射表（哈弗H6三代推荐配置）
@@ -79,14 +88,14 @@ class KeyMappingManager(context: Context) {
                 id = "default_06",
                 modifierKeyCode = DEFAULT_STAR_KEYCODE,
                 actionKeyCode = KeyEvent.KEYCODE_VOLUME_UP,      // * + 音量+
-                action = HvacAction.TEMP_UP,
+                action = HvacAction.AC_TOGGLE,
                 description = "* + 音量+ → A/C 开关"
             ),
             KeyMapping(
                 id = "default_07",
                 modifierKeyCode = DEFAULT_STAR_KEYCODE,
                 actionKeyCode = KeyEvent.KEYCODE_VOLUME_DOWN,    // * + 音量-
-                action = HvacAction.TEMP_DOWN,
+                action = HvacAction.AUTO_MODE,
                 description = "* + 音量- → AUTO 自动模式"
             ),
             KeyMapping(
