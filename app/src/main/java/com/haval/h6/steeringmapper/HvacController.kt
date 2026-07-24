@@ -2,9 +2,7 @@ package com.haval.h6.steeringmapper
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
-import android.content.Intent
 import android.graphics.Path
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -13,69 +11,97 @@ import android.view.accessibility.AccessibilityNodeInfo
 /**
  * 空调控制器
  *
- * 控制方案（双路）：
- * 1. Broadcast Intent 方案（优先）：发送长城车机内部广播
- * 2. AccessibilityService 模拟触控（兜底）：打开空调界面，查找控件节点，执行 click
+ * ★ 控制方案：AccessibilityService 直接操作灵控球（com.gwm.dynamiclauncher）内嵌 HVAC Widget
  *
- * 哈弗H6三代（华阳100A/安波福403A）空调 App 包名：
- * - 主要包名：com.greatwall.hvac 或 com.haval.hvac
- * - Activity：com.greatwall.hvac.ui.HvacActivity
- * 具体包名以实际车机为准（用 ADB "dumpsys window windows | grep mCurrentFocus" 查看）
+ * 原理：哈弗H6 的空调控制面板不是独立 App，而是嵌在系统 Launcher「灵控球」
+ * (com.gwm.dynamiclauncher) 内的常驻悬浮卡片，始终挂在屏幕上，无需切换前台。
+ *
+ * ViewId 来源：从 com.gwm.dynamiclauncher v1.9.310800 的 R.java 提取，已验证真实存在。
+ *
+ * 注意：protected-broadcast (android.car.intent.action.TOGGLE_HVAC_CONTROLS) 和
+ * CarHvacManager (CONTROL_CAR_CLIMATE 权限) 均需系统签名，三方 APK 无法使用。
  */
 class HvacController(private val service: AccessibilityService) {
 
     companion object {
         private const val TAG = "HvacController"
 
-        // ===== 哈弗H6三代空调 App 包名（可能因版本而异）=====
-        // 建议用 adb shell dumpsys window windows | findstr "mCurrentFocus" 确认
-        // 注意：arrayOf 不能用 const val，改为普通 val
+        // ===== 灵控球包名（空调控件所在宿主）=====
+        // 空调 Widget 常驻于 Launcher，无需启动独立 App
+        const val LAUNCHER_PKG = "com.gwm.dynamiclauncher"
+
+        // 保留备用候选，万一车型不同有独立空调 App
         val HVAC_PACKAGE_CANDIDATES = arrayOf(
+            LAUNCHER_PKG,           // 灵控球（首选，HVAC Widget 在此）
+            "com.gwm.hvac",
             "com.greatwall.hvac",
             "com.haval.hvac",
-            "com.gwm.hvac",
-            "com.haval.climate",
-            "com.greatwall.climate"
+            "com.haval.climate"
         )
-
-        // ===== 长城车机内部广播 Action（如果支持）=====
-        const val BROADCAST_HVAC_CONTROL = "com.greatwall.hvac.action.CONTROL"
-        const val BROADCAST_HVAC_CONTROL_ALT = "com.gwm.hvac.CONTROL"
-
-        // 广播参数 Key
-        const val EXTRA_COMMAND = "command"
-        const val EXTRA_VALUE = "value"
-        const val EXTRA_ZONE = "zone"   // 0=驾驶侧, 1=副驾侧
-
-        // 广播 command 值
-        const val CMD_TEMP_SET = "set_temperature"
-        const val CMD_FAN_SPEED = "set_fan_speed"
-        const val CMD_RECIRCULATION = "set_recirculation"
-        const val CMD_AC = "set_ac"
-        const val CMD_AUTO = "set_auto"
-        const val CMD_FRONT_DEFROST = "set_front_defrost"
-        const val CMD_REAR_DEFROST = "set_rear_defrost"
-        const val CMD_POWER = "set_power"
-        const val CMD_BLOWER_DIR = "set_blower_direction"
 
         // 风向值
         const val BLOWER_FACE = 0
         const val BLOWER_FEET = 1
         const val BLOWER_BOTH = 2
 
-        // AccessibilityNode ViewId（根据实际 APK 布局确定，此处为估计值）
-        // 建议用 uiautomatorviewer 或 ADB 命令查看实际 viewId
+        /**
+         * AccessibilityNode ViewId
+         * 均来自 com.gwm.dynamiclauncher R.java，格式：包名:id/资源名
+         *
+         * 温度控制：
+         *   hvac_view_add (0x7F0A0064)        温度 +
+         *   hvac_view_subtract (0x7F0A0066)   温度 -
+         *   hvac_tv_temperature (0x7F0A0063)  当前温度文本（只读，用于读值）
+         *
+         * 风量控制：
+         *   iv_fan_speed_right (0x7F0A02FD)   风量 +（右箭头）
+         *   iv_fan_speed_left  (0x7F0A02FC)   风量 -（左箭头）
+         *   hvac_fan_speed_seek_bar (0x7F0A0062) 风量 SeekBar
+         *
+         * 功能按钮（灵控球主面板）：
+         *   btn_hvac_ac        (0x7F0702E2)   A/C 压缩机开关
+         *   btn_hvac_auto      (0x7F0702E3)   AUTO 模式
+         *   btn_hvac_cycle_mode(0x7F0702E4)   内/外循环切换
+         *   btn_hvac_ionizer   (0x7F0702E5)   负离子
+         *   btn_hvac_zone      (0x7F0702E6)   双区独立/同步
+         *
+         * 功能图标（弹窗/详情面板，btn_ 不可用时备选）：
+         *   iv_hvac_power      (0x7F0A02FD)   空调总电源
+         *   iv_hvac_ac         (0x7F0A02F7)   A/C
+         *   iv_hvac_auto       (0x7F0A02F8)   AUTO
+         *   iv_hvac_cycle_mode (0x7F0A02FA)   内外循环
+         *   iv_hvac_blower_mode(0x7F0A02F9)   风向
+         */
         object NodeId {
-            const val TEMP_UP_DRIVER = "com.greatwall.hvac:id/btn_temp_up_driver"
-            const val TEMP_DOWN_DRIVER = "com.greatwall.hvac:id/btn_temp_down_driver"
-            const val FAN_SPEED_UP = "com.greatwall.hvac:id/btn_fan_up"
-            const val FAN_SPEED_DOWN = "com.greatwall.hvac:id/btn_fan_down"
-            const val RECIRCULATION = "com.greatwall.hvac:id/btn_recirculation"
-            const val AC_BUTTON = "com.greatwall.hvac:id/btn_ac"
-            const val AUTO_BUTTON = "com.greatwall.hvac:id/btn_auto"
-            const val FRONT_DEFROST = "com.greatwall.hvac:id/btn_front_defrost"
-            const val REAR_DEFROST = "com.greatwall.hvac:id/btn_rear_defrost"
-            const val POWER_BUTTON = "com.greatwall.hvac:id/btn_power"
+            private const val PKG = "com.gwm.dynamiclauncher:id"
+
+            // 温度
+            const val TEMP_UP_DRIVER   = "$PKG/hvac_view_add"
+            const val TEMP_DOWN_DRIVER = "$PKG/hvac_view_subtract"
+            const val TEMP_TEXT        = "$PKG/hvac_tv_temperature"
+
+            // 风量
+            const val FAN_SPEED_UP     = "$PKG/iv_fan_speed_right"
+            const val FAN_SPEED_DOWN   = "$PKG/iv_fan_speed_left"
+            const val FAN_SPEED_BAR    = "$PKG/hvac_fan_speed_seek_bar"
+
+            // 功能按钮（主面板，优先使用）
+            const val AC_BUTTON        = "$PKG/btn_hvac_ac"
+            const val AUTO_BUTTON      = "$PKG/btn_hvac_auto"
+            const val RECIRCULATION    = "$PKG/btn_hvac_cycle_mode"
+            const val ZONE_BUTTON      = "$PKG/btn_hvac_zone"
+
+            // 功能图标（弹窗面板，备选）
+            const val POWER_BUTTON     = "$PKG/iv_hvac_power"
+            const val AC_IV            = "$PKG/iv_hvac_ac"
+            const val AUTO_IV          = "$PKG/iv_hvac_auto"
+            const val CYCLE_IV         = "$PKG/iv_hvac_cycle_mode"
+            const val BLOWER_IV        = "$PKG/iv_hvac_blower_mode"
+
+            // 除雾（来自 R.java item_v3_hvac_* 系列）
+            const val FRONT_DEFROST    = "$PKG/item_v3_hvac_front_defrost"
+            const val REAR_DEFROST     = "$PKG/item_v3_hvac_rear_defrost"
+            const val AUTO_DEFROST     = "$PKG/item_v3_hvac_auto_defrost"
         }
     }
 
@@ -96,129 +122,78 @@ class HvacController(private val service: AccessibilityService) {
 
     // ========================= 温度控制 =========================
 
-    fun adjustTemperature(delta: Float) {
+    /**
+     * 调整驾驶侧温度
+     * @param delta 正数升温，负数降温（每次点击 ±0.5°C）
+     * @param repeat 连续点击次数（默认 1，温度变化大时可传 2~4）
+     */
+    fun adjustTemperature(delta: Float, repeat: Int = 1) {
         cachedDriverTemp = (cachedDriverTemp + delta).coerceIn(16.0f, 30.0f)
-        Log.i(TAG, "调整温度 $delta → 目标: $cachedDriverTemp°C")
-
-        val success = sendHvacBroadcast(CMD_TEMP_SET, cachedDriverTemp.toString())
-        if (!success) {
-            // 广播失败，改用模拟点击
-            val nodeId = if (delta > 0) NodeId.TEMP_UP_DRIVER else NodeId.TEMP_DOWN_DRIVER
-            clickNodeById(nodeId)
-        }
+        Log.i(TAG, "调整温度 $delta × $repeat → 目标: $cachedDriverTemp°C")
+        val nodeId = if (delta > 0) NodeId.TEMP_UP_DRIVER else NodeId.TEMP_DOWN_DRIVER
+        repeat(repeat) { clickNodeById(nodeId) }
     }
 
     // ========================= 风量控制 =========================
 
+    /**
+     * 调整风量档位
+     * @param delta 正数增大，负数减小
+     */
     fun adjustFanSpeed(delta: Int) {
         cachedFanSpeed = (cachedFanSpeed + delta).coerceIn(1, 7)
         Log.i(TAG, "调整风量 $delta → 目标: $cachedFanSpeed 档")
-
-        val success = sendHvacBroadcast(CMD_FAN_SPEED, cachedFanSpeed.toString())
-        if (!success) {
-            val nodeId = if (delta > 0) NodeId.FAN_SPEED_UP else NodeId.FAN_SPEED_DOWN
-            clickNodeById(nodeId)
-        }
+        val nodeId = if (delta > 0) NodeId.FAN_SPEED_UP else NodeId.FAN_SPEED_DOWN
+        clickNodeById(nodeId)
     }
 
     // ========================= 内外循环 =========================
 
     fun toggleRecirculation() {
         Log.i(TAG, "切换内外循环")
-        val success = sendHvacBroadcast(CMD_RECIRCULATION, "toggle")
-        if (!success) clickNodeById(NodeId.RECIRCULATION)
+        clickNodeById(NodeId.RECIRCULATION)
     }
 
     // ========================= A/C 开关 =========================
 
     fun toggleAC() {
         Log.i(TAG, "切换 A/C")
-        val success = sendHvacBroadcast(CMD_AC, "toggle")
-        if (!success) clickNodeById(NodeId.AC_BUTTON)
+        clickNodeById(NodeId.AC_BUTTON)
     }
 
     // ========================= AUTO 模式 =========================
 
     fun setAutoMode() {
         Log.i(TAG, "设置 AUTO 模式")
-        val success = sendHvacBroadcast(CMD_AUTO, "on")
-        if (!success) clickNodeById(NodeId.AUTO_BUTTON)
+        clickNodeById(NodeId.AUTO_BUTTON)
     }
 
     // ========================= 前挡风除雾 =========================
 
     fun toggleFrontDefrost() {
         Log.i(TAG, "切换前挡风除雾")
-        val success = sendHvacBroadcast(CMD_FRONT_DEFROST, "toggle")
-        if (!success) clickNodeById(NodeId.FRONT_DEFROST)
+        clickNodeById(NodeId.FRONT_DEFROST)
     }
 
     // ========================= 后挡风加热 =========================
 
     fun toggleRearDefrost() {
         Log.i(TAG, "切换后挡风加热")
-        val success = sendHvacBroadcast(CMD_REAR_DEFROST, "toggle")
-        if (!success) clickNodeById(NodeId.REAR_DEFROST)
+        clickNodeById(NodeId.REAR_DEFROST)
     }
 
     // ========================= 空调总电源 =========================
 
     fun toggleHvacPower() {
         Log.i(TAG, "切换空调电源")
-        val success = sendHvacBroadcast(CMD_POWER, "toggle")
-        if (!success) clickNodeById(NodeId.POWER_BUTTON)
+        clickNodeById(NodeId.POWER_BUTTON)
     }
 
     // ========================= 风向 =========================
 
-    fun setBlowerDirection(direction: Int) {
-        val dirStr = when (direction) {
-            BLOWER_FACE -> "face"
-            BLOWER_FEET -> "feet"
-            BLOWER_BOTH -> "both"
-            else -> "face"
-        }
-        Log.i(TAG, "设置风向: $dirStr")
-        sendHvacBroadcast(CMD_BLOWER_DIR, dirStr)
-        // 风向按键的 nodeId 需根据实际布局扫描，此处略
-    }
-
-    // ====================================================
-    // 内部方法：发送广播
-    // ====================================================
-
-    /**
-     * 向车机系统发送空调控制广播
-     * @return true=广播已发送（不代表成功执行），false=发送失败
-     *
-     * 注意：如果车机系统没有注册对应的 BroadcastReceiver，广播会被忽略
-     * 可以通过 logcat 过滤 "com.greatwall.hvac" 确认是否收到
-     */
-    private fun sendHvacBroadcast(command: String, value: String, zone: Int = 0): Boolean {
-        return try {
-            val intent = Intent(BROADCAST_HVAC_CONTROL).apply {
-                putExtra(EXTRA_COMMAND, command)
-                putExtra(EXTRA_VALUE, value)
-                putExtra(EXTRA_ZONE, zone)
-                // 指定包名，避免广播被其他 App 拦截
-                setPackage(HVAC_PACKAGE_CANDIDATES[0])
-            }
-            service.sendBroadcast(intent)
-
-            // 同时尝试备用 Action
-            val intent2 = Intent(BROADCAST_HVAC_CONTROL_ALT).apply {
-                putExtra(EXTRA_COMMAND, command)
-                putExtra(EXTRA_VALUE, value)
-                putExtra(EXTRA_ZONE, zone)
-            }
-            service.sendBroadcast(intent2)
-
-            Log.d(TAG, "广播已发送: command=$command, value=$value")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "发送广播失败: ${e.message}")
-            false
-        }
+    fun cycleBlowerDirection() {
+        Log.i(TAG, "切换风向（循环）")
+        clickNodeById(NodeId.BLOWER_IV)
     }
 
     // ====================================================
@@ -226,30 +201,19 @@ class HvacController(private val service: AccessibilityService) {
     // ====================================================
 
     /**
-     * 通过 ViewId 查找节点并执行点击
-     * 注意：需要空调 App 在前台（或至少在后台可见）
+     * 通过 ViewId 查找节点并执行点击。
+     *
+     * 灵控球的空调 Widget 是常驻悬浮层，不是活跃窗口，
+     * 因此必须遍历 service.windows 所有窗口才能找到目标节点。
+     * FLAG_RETRIEVE_INTERACTIVE_WINDOWS 已在 ServiceInfo 中开启。
      */
     private fun clickNodeById(viewId: String): Boolean {
         return try {
-            // 优先在当前窗口查找
-            val rootNode = service.rootInActiveWindow ?: run {
-                Log.w(TAG, "无法获取根节点，尝试打开空调界面")
-                openHvacApp()
+            val node = findNodeInAllWindows(viewId)
+            if (node == null) {
+                Log.w(TAG, "所有窗口均未找到节点: $viewId")
                 return false
             }
-
-            val nodes = rootNode.findAccessibilityNodeInfosByViewId(viewId)
-            if (nodes.isNullOrEmpty()) {
-                Log.w(TAG, "节点未找到: $viewId，尝试打开空调界面后重试")
-                openHvacApp()
-                // 延迟后重试
-                handler.postDelayed({
-                    retryClickNodeById(viewId)
-                }, 800)
-                return false
-            }
-
-            val node = nodes[0]
             val result = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             Log.d(TAG, "点击节点 $viewId: ${if (result) "成功" else "失败"}")
             node.recycle()
@@ -261,26 +225,33 @@ class HvacController(private val service: AccessibilityService) {
     }
 
     /**
-     * 延迟后重试点击（用于打开空调 App 后）
+     * 在所有可见窗口中搜索指定 viewId 的第一个节点。
+     * 优先搜索灵控球（LAUNCHER_PKG）所在窗口，再搜其余窗口。
      */
-    private fun retryClickNodeById(viewId: String) {
-        try {
-            val rootNode = service.rootInActiveWindow ?: return
-            val nodes = rootNode.findAccessibilityNodeInfosByViewId(viewId)
+    private fun findNodeInAllWindows(viewId: String): AccessibilityNodeInfo? {
+        val windows = try { service.windows } catch (e: Exception) { emptyList() }
+
+        // 优先搜灵控球窗口
+        val launchers = windows.filter { it.root?.packageName?.toString() == LAUNCHER_PKG }
+        val others    = windows.filter { it.root?.packageName?.toString() != LAUNCHER_PKG }
+
+        for (window in launchers + others) {
+            val root = window.root ?: continue
+            val nodes = root.findAccessibilityNodeInfosByViewId(viewId)
             if (!nodes.isNullOrEmpty()) {
-                nodes[0].performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                nodes[0].recycle()
+                Log.d(TAG, "在窗口 ${root.packageName} 中找到节点: $viewId")
+                return nodes[0]
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "重试点击失败: ${e.message}")
+            root.recycle()
         }
+        return null
     }
 
     /**
-     * 按坐标模拟点击（当找不到节点时的最后手段）
-     * 坐标需根据你的车机分辨率和空调界面布局确定
+     * 按坐标模拟点击（当找不到节点时的备用方案）。
+     * 坐标需根据实车分辨率和空调 Widget 的实际位置确定。
      */
-    private fun clickByCoordinate(x: Float, y: Float) {
+    fun clickByCoordinate(x: Float, y: Float) {
         try {
             val path = Path().apply { moveTo(x, y) }
             val gesture = GestureDescription.Builder()
@@ -291,25 +262,5 @@ class HvacController(private val service: AccessibilityService) {
         } catch (e: Exception) {
             Log.e(TAG, "手势点击失败: ${e.message}")
         }
-    }
-
-    /**
-     * 打开空调 App
-     */
-    private fun openHvacApp() {
-        for (pkgName in HVAC_PACKAGE_CANDIDATES) {
-            try {
-                val intent = service.packageManager.getLaunchIntentForPackage(pkgName)
-                if (intent != null) {
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    service.startActivity(intent)
-                    Log.i(TAG, "已启动空调 App: $pkgName")
-                    return
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "启动 $pkgName 失败: ${e.message}")
-            }
-        }
-        Log.e(TAG, "未找到空调 App，请在设置中配置正确的包名")
     }
 }
