@@ -197,9 +197,9 @@ class SteeringKeyService : AccessibilityService() {
             HvacAction.FRONT_DEFROST        -> ctrl.toggleFrontDefrost()
             HvacAction.REAR_DEFROST         -> ctrl.toggleRearDefrost()
             HvacAction.HVAC_POWER_TOGGLE    -> ctrl.toggleHvacPower()
-            HvacAction.BLOWER_DIR_FACE      -> ctrl.setBlowerDirection(HvacController.BLOWER_FACE)
-            HvacAction.BLOWER_DIR_FEET      -> ctrl.setBlowerDirection(HvacController.BLOWER_FEET)
-            HvacAction.BLOWER_DIR_BOTH      -> ctrl.setBlowerDirection(HvacController.BLOWER_BOTH)
+            HvacAction.BLOWER_DIR_FACE,
+            HvacAction.BLOWER_DIR_FEET,
+            HvacAction.BLOWER_DIR_BOTH      -> ctrl.cycleBlowerDirection()  // 待实车确认后可再细分
         }
         sendBroadcast(Intent(ACTION_KEY_DETECTED).apply {
             putExtra(EXTRA_KEYCODE, triggerKeyCode)
