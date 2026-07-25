@@ -10,10 +10,10 @@ android {
     defaultConfig {
         applicationId = "com.haval.h6.steeringmapper"
         // 哈弗H6三代车机一般运行 Android 10（API 29）或 Android 11（API 30）
-        minSdk = 29
+        minSdk = 28
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "2.0.1"
     }
 
     buildTypes {
