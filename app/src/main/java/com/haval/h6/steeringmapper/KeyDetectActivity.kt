@@ -85,6 +85,7 @@ class KeyDetectActivity : AppCompatActivity() {
 
         // 通过广播通知 Service
         sendBroadcast(Intent("com.haval.h6.steeringmapper.SET_DETECT_MODE").apply {
+            setPackage("com.haval.h6.steeringmapper")
             putExtra("enabled", enabled)
         })
     }
